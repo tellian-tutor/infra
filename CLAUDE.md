@@ -104,7 +104,7 @@ Internet -> Caddy (:443, TLS) -> frontend (:80) | core (:8000) | ai-processor (:
 ```
 
 Caddy routes:
-- `/api/*`, `/admin/*`, `/health/*`, `/static/*` -> svc-core
+- `/api/*`, `/admin/*`, `/health/*`, `/ready/*`, `/static/*` -> svc-core
 - Everything else -> svc-frontend (SPA)
 - svc-ai-processor is internal only (not exposed through Caddy)
 

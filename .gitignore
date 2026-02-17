@@ -1,0 +1,13 @@
+# Decrypted secrets (NEVER commit these)
+envs/**/.env
+.env
+
+# Age encryption keys
+*.age
+
+# Ansible retry files
+*.retry
+
+# Python
+__pycache__/
+*.pyc

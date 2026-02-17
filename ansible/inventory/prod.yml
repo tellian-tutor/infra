@@ -1,0 +1,11 @@
+all:
+  hosts:
+    prod-vm:
+      ansible_host: CHANGE_ME  # VM public IP
+      ansible_user: deploy
+      ansible_python_interpreter: /usr/bin/python3
+  vars:
+    app_root: /opt/tellian-tutor
+    compose_dir: "{{ app_root }}/compose"
+    env_dir: "{{ app_root }}/envs/prod"
+    caddy_dir: "{{ app_root }}/caddy"

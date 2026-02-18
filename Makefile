@@ -122,8 +122,8 @@ backup-db:
 
 .PHONY: encrypt-env
 encrypt-env:
-	sops -e envs/prod/.env > envs/prod/.env.sops.yml
+	sops -e --input-type dotenv --output-type yaml envs/prod/.env > envs/prod/.env.sops.yml
 
 .PHONY: decrypt-env
 decrypt-env:
-	sops -d envs/prod/.env.sops.yml > envs/prod/.env
+	sops -d --output-type dotenv envs/prod/.env.sops.yml > envs/prod/.env

@@ -1,0 +1,27 @@
+{$DOMAIN:localhost} {
+    # API, admin, health, ready, static -> svc-core
+    handle /api/* {
+        reverse_proxy core:8000
+    }
+
+    handle /admin/* {
+        reverse_proxy core:8000
+    }
+
+    handle /health/* {
+        reverse_proxy core:8000
+    }
+
+    handle /ready/* {
+        reverse_proxy core:8000
+    }
+
+    handle /static/* {
+        reverse_proxy core:8000
+    }
+
+    # Everything else -> svc-frontend (SPA)
+    handle {
+        reverse_proxy frontend:80
+    }
+}

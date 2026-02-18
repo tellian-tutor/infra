@@ -1,0 +1,117 @@
+---
+# --- UFW Firewall ---
+
+- name: Install UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+
+- name: Allow SSH (22/tcp)
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Allow HTTP (80/tcp)
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Allow HTTPS (443/tcp)
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+
+- name: Set UFW default deny incoming
+  community.general.ufw:
+    default: deny
+    direction: incoming
+
+- name: Set UFW default allow outgoing
+  community.general.ufw:
+    default: allow
+    direction: outgoing
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+
+# --- SSH Hardening ---
+
+- name: Disable password authentication
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication no"
+    validate: "sshd -t -f %s"
+  notify: Restart sshd
+
+- name: Disable root login
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PermitRootLogin"
+    line: "PermitRootLogin no"
+    validate: "sshd -t -f %s"
+  notify: Restart sshd
+
+- name: Enable public key authentication
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PubkeyAuthentication"
+    line: "PubkeyAuthentication yes"
+    validate: "sshd -t -f %s"
+  notify: Restart sshd
+
+# --- fail2ban ---
+
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+
+- name: Ensure fail2ban service is enabled and running
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+
+# --- Swap ---
+
+- name: Check if swap file exists
+  ansible.builtin.stat:
+    path: /swapfile
+  register: swap_file
+
+- name: Create 2GB swap file
+  ansible.builtin.command:
+    cmd: fallocate -l 2G /swapfile
+  when: not swap_file.stat.exists
+  changed_when: true
+
+- name: Set swap file permissions
+  ansible.builtin.file:
+    path: /swapfile
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Format swap file
+  ansible.builtin.command:
+    cmd: mkswap /swapfile
+  when: not swap_file.stat.exists
+  changed_when: true
+
+- name: Enable swap file
+  ansible.builtin.command:
+    cmd: swapon /swapfile
+  when: not swap_file.stat.exists
+  changed_when: true
+
+- name: Add swap to fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    line: "/swapfile none swap sw 0 0"
+    state: present

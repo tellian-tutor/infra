@@ -1,7 +1,7 @@
 all:
   hosts:
     prod-vm:
-      ansible_host: CHANGE_ME  # VM public IP
+      ansible_host: 93.77.190.30
       ansible_user: deploy
       ansible_python_interpreter: /usr/bin/python3
   vars:

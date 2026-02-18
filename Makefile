@@ -2,6 +2,7 @@
 
 ANSIBLE_DIR = ansible
 TF_DIR = terraform
+export ANSIBLE_CONFIG = $(ANSIBLE_DIR)/ansible.cfg
 
 # Default target
 .PHONY: help

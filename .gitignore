@@ -11,6 +11,7 @@ envs/**/.env
 # Python
 __pycache__/
 *.pyc
+.venv/
 
 # Terraform
 terraform/.terraform/

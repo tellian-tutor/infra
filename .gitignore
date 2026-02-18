@@ -11,6 +11,7 @@ envs/**/.env
 # Python
 __pycache__/
 *.pyc
+.venv/
 
 # Terraform
 terraform/.terraform/
@@ -20,3 +21,6 @@ terraform/*.tfplan
 
 # Yandex Cloud service account key (NEVER commit)
 sa-key.json
+
+# Database backups (local only)
+backups/

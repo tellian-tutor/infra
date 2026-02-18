@@ -1,0 +1,76 @@
+---
+- name: Show tellian-tutor stack status
+  hosts: all
+  become: false
+
+  vars:
+    services:
+      - postgres
+      - redis
+      - core
+      - ai-processor
+      - frontend
+      - caddy
+
+  tasks:
+    - name: Show docker compose status
+      ansible.builtin.shell: |
+        {{ compose_cmd }} ps -a
+      args:
+        executable: /bin/bash
+      register: compose_status
+      changed_when: false
+      failed_when: false
+
+    - name: Print compose status
+      ansible.builtin.debug:
+        var: compose_status.stdout_lines
+
+    - name: Check health of all services
+      ansible.builtin.shell: |
+        set -euo pipefail
+        for svc in {{ services | join(' ') }}; do
+          CID=$({{ compose_cmd }} ps -q "$svc" 2>/dev/null)
+          if [ -z "$CID" ]; then
+            echo "$svc: NOT RUNNING"
+          else
+            STATUS=$(docker inspect --format='{{ '{{' }}.State.Health.Status{{ '}}' }}' "$CID" 2>/dev/null || echo "NO HEALTHCHECK")
+            echo "$svc: $STATUS"
+          fi
+        done
+      args:
+        executable: /bin/bash
+      register: health_results
+      changed_when: false
+      failed_when: false
+
+    - name: Print service health
+      ansible.builtin.debug:
+        var: health_results.stdout_lines
+
+    - name: Show disk usage
+      ansible.builtin.command: df -h /
+      register: disk_usage
+      changed_when: false
+
+    - name: Print disk usage
+      ansible.builtin.debug:
+        var: disk_usage.stdout_lines
+
+    - name: Show memory usage
+      ansible.builtin.command: free -h
+      register: memory_usage
+      changed_when: false
+
+    - name: Print memory usage
+      ansible.builtin.debug:
+        var: memory_usage.stdout_lines
+
+    - name: Show docker disk usage
+      ansible.builtin.command: docker system df
+      register: docker_disk_usage
+      changed_when: false
+
+    - name: Print docker disk usage
+      ansible.builtin.debug:
+        var: docker_disk_usage.stdout_lines

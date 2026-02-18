@@ -1,0 +1,94 @@
+---
+# NOTE: Rollback is functionally a deploy of an older version. This playbook
+# intentionally duplicates deploy.yml tasks (minus Caddy reload) to keep a
+# distinct play name in logs and allow future rollback-specific logic.
+- name: Rollback service to a previous version
+  hosts: all
+  become: false
+
+  vars:
+    service_version_map:
+      core: CORE_VERSION
+      frontend: FRONTEND_VERSION
+      ai-processor: AI_PROCESSOR_VERSION
+    version_var: "{{ service_version_map[service] }}"
+
+  pre_tasks:
+    - name: Verify local .env exists (run 'make decrypt-env' first)
+      ansible.builtin.stat:
+        path: "{{ local_repo_root }}/envs/prod/.env"
+      delegate_to: localhost
+      register: local_env_file
+
+    - name: Fail if .env not found
+      ansible.builtin.fail:
+        msg: "envs/prod/.env not found. Run 'make decrypt-env' first."
+      when: not local_env_file.stat.exists
+
+    - name: Validate service parameter
+      ansible.builtin.assert:
+        that:
+          - service is defined
+          - service in service_version_map
+        fail_msg: >
+          'service' must be one of: core, frontend, ai-processor.
+          Got: {{ service | default('undefined') }}
+
+    - name: Validate version parameter
+      ansible.builtin.assert:
+        that:
+          - version is defined
+          - version | length > 0
+        fail_msg: "'version' is required. Example: make rollback SERVICE=core VERSION=v0.1.0"
+
+  roles:
+    - app
+
+  tasks:
+    - name: "Set {{ version_var }}={{ version }} in .env file"
+      ansible.builtin.lineinfile:
+        path: "{{ env_dir }}/.env"
+        regexp: "^{{ version_var }}="
+        line: "{{ version_var }}={{ version }}"
+        state: present
+
+    - name: "Pull {{ service }} image ({{ version }})"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        {{ compose_cmd }} pull {{ service }}
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: "Recreate {{ service }} container with version {{ version }}"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        {{ compose_cmd }} up -d --no-deps {{ service }}
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: "Wait for {{ service }} to be healthy"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        docker inspect --format='{{ '{{' }}.State.Health.Status{{ '}}' }}' \
+          $({{ compose_cmd }} ps -q {{ service }})
+      args:
+        executable: /bin/bash
+      register: health_result
+      until: health_result.stdout == 'healthy'
+      retries: 20
+      delay: 5
+      changed_when: false
+
+    - name: Show stack status
+      ansible.builtin.shell: |
+        {{ compose_cmd }} ps
+      args:
+        executable: /bin/bash
+      register: stack_status
+      changed_when: false
+
+    - name: Print stack status
+      ansible.builtin.debug:
+        var: stack_status.stdout_lines

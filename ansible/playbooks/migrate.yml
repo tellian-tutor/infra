@@ -1,0 +1,28 @@
+---
+- name: Run Django migrations
+  hosts: all
+  become: false
+
+  tasks:
+    - name: Check that core container is running
+      ansible.builtin.shell: |
+        set -euo pipefail
+        {{ compose_cmd }} ps -q core
+      args:
+        executable: /bin/bash
+      register: core_container
+      changed_when: false
+      failed_when: core_container.stdout | length == 0
+
+    - name: Run Django migrate
+      ansible.builtin.shell: |
+        set -euo pipefail
+        {{ compose_cmd }} exec -T core python manage.py migrate --no-input
+      args:
+        executable: /bin/bash
+      register: migrate_result
+      changed_when: "'Applying' in migrate_result.stdout"
+
+    - name: Print migration output
+      ansible.builtin.debug:
+        var: migrate_result.stdout_lines

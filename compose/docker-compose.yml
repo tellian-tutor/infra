@@ -1,3 +1,6 @@
+# NOTE: env_file injects vars into containers; the --env-file flag on the
+# docker compose CLI provides variable interpolation (e.g. ${CORE_VERSION}).
+# Both load the same .env file but serve different purposes.
 services:
   postgres:
     image: postgres:16-alpine
@@ -73,7 +76,7 @@ services:
     expose:
       - "80"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:80/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -95,7 +98,7 @@ services:
       - frontend
       - core
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:80/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

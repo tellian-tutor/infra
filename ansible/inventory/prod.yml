@@ -9,3 +9,5 @@ all:
     compose_dir: "{{ app_root }}/compose"
     env_dir: "{{ app_root }}/envs/prod"
     caddy_dir: "{{ app_root }}/caddy"
+    local_repo_root: "{{ playbook_dir }}/../.."
+    compose_cmd: "docker compose --env-file {{ env_dir }}/.env -f {{ compose_dir }}/docker-compose.yml"

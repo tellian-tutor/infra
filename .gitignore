@@ -21,3 +21,6 @@ terraform/*.tfplan
 
 # Yandex Cloud service account key (NEVER commit)
 sa-key.json
+
+# Database backups (local only)
+backups/

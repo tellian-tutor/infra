@@ -25,7 +25,7 @@ help:
 	@echo "Deploy:"
 	@echo "  make deploy SERVICE=core VERSION=v0.2.0  - Deploy single service"
 	@echo "  make migrate        - Run Django migrations"
-	@echo "  make rollback SERVICE=core         - Rollback to previous tag"
+	@echo "  make rollback SERVICE=core VERSION=v0.1.0  - Rollback to previous tag"
 	@echo ""
 	@echo "Operations:"
 	@echo "  make status         - Show service health"
@@ -98,10 +98,11 @@ migrate:
 
 .PHONY: rollback
 rollback:
-	@test -n "$(SERVICE)" || (echo "SERVICE is required. Usage: make rollback SERVICE=core" && exit 1)
+	@test -n "$(SERVICE)" || (echo "SERVICE is required. Usage: make rollback SERVICE=core VERSION=v0.1.0" && exit 1)
+	@test -n "$(VERSION)" || (echo "VERSION is required. Usage: make rollback SERVICE=core VERSION=v0.1.0" && exit 1)
 	ansible-playbook $(ANSIBLE_DIR)/playbooks/rollback.yml \
 		-i $(ANSIBLE_DIR)/inventory/prod.yml \
-		-e "service=$(SERVICE)"
+		-e "service=$(SERVICE) version=$(VERSION)"
 
 .PHONY: status
 status:
@@ -111,7 +112,7 @@ status:
 logs:
 	@test -n "$(SERVICE)" || (echo "SERVICE is required. Usage: make logs SERVICE=core" && exit 1)
 	ssh deploy@$$(grep ansible_host $(ANSIBLE_DIR)/inventory/prod.yml | head -1 | awk '{print $$2}') \
-		"cd /opt/tellian-tutor && docker compose logs -f $(SERVICE) --tail=100"
+		"docker compose --env-file /opt/tellian-tutor/envs/prod/.env -f /opt/tellian-tutor/compose/docker-compose.yml logs -f $(SERVICE) --tail=100"
 
 .PHONY: ssh
 ssh:
@@ -123,7 +124,8 @@ backup-db:
 
 .PHONY: encrypt-env
 encrypt-env:
-	sops -e --input-type dotenv --output-type yaml envs/prod/.env > envs/prod/.env.sops.yml
+	sops -e --input-type dotenv --output-type yaml envs/prod/.env > envs/prod/.env.sops.yml.tmp && \
+		mv envs/prod/.env.sops.yml.tmp envs/prod/.env.sops.yml
 
 .PHONY: decrypt-env
 decrypt-env:

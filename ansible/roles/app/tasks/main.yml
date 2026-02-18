@@ -1,0 +1,81 @@
+---
+# roles/app - Sync deployment files to VM and authenticate with GHCR
+
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: deploy
+    group: deploy
+    mode: "0755"
+  loop:
+    - "{{ app_root }}"
+    - "{{ compose_dir }}"
+    - "{{ env_dir }}"
+    - "{{ caddy_dir }}"
+  become: true
+
+- name: Check if .env already exists on VM
+  ansible.builtin.stat:
+    path: "{{ env_dir }}/.env"
+  register: existing_env_file
+
+- name: Read current version vars from VM .env (preserve across deploys)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    grep -E '^(CORE_VERSION|FRONTEND_VERSION|AI_PROCESSOR_VERSION)=' {{ env_dir }}/.env || true
+  args:
+    executable: /bin/bash
+  register: saved_version_lines
+  changed_when: false
+  when: existing_env_file.stat.exists
+
+- name: Copy decrypted .env file to VM
+  ansible.builtin.copy:
+    src: "{{ local_repo_root }}/envs/prod/.env"
+    dest: "{{ env_dir }}/.env"
+    owner: deploy
+    group: deploy
+    mode: "0600"
+  register: env_file_copy
+
+- name: Restore version vars that were on VM before .env copy
+  ansible.builtin.lineinfile:
+    path: "{{ env_dir }}/.env"
+    regexp: "^{{ item.split('=', 1)[0] }}="
+    line: "{{ item }}"
+    state: present
+  loop: "{{ saved_version_lines.stdout_lines }}"
+  when:
+    - existing_env_file.stat.exists
+    - saved_version_lines.stdout_lines | length > 0
+  no_log: true
+
+- name: Copy docker-compose.yml to VM
+  ansible.builtin.copy:
+    src: "{{ local_repo_root }}/compose/docker-compose.yml"
+    dest: "{{ compose_dir }}/docker-compose.yml"
+    owner: deploy
+    group: deploy
+    mode: "0644"
+  register: compose_file_copy
+
+- name: Copy Caddyfile to VM
+  ansible.builtin.copy:
+    src: "{{ local_repo_root }}/caddy/Caddyfile"
+    dest: "{{ caddy_dir }}/Caddyfile"
+    owner: deploy
+    group: deploy
+    mode: "0644"
+  register: caddy_file_copy
+
+- name: Login to GHCR
+  ansible.builtin.shell: |
+    set -euo pipefail
+    GHCR_TOKEN=$(grep '^GHCR_TOKEN=' {{ env_dir }}/.env | cut -d'=' -f2-)
+    GHCR_USER=$(grep '^GHCR_USER=' {{ env_dir }}/.env | cut -d'=' -f2-)
+    echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+  args:
+    executable: /bin/bash
+  changed_when: false
+  no_log: true

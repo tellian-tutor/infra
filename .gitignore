@@ -11,3 +11,12 @@ envs/**/.env
 # Python
 __pycache__/
 *.pyc
+
+# Terraform
+terraform/.terraform/
+terraform/terraform.tfstate*
+terraform/terraform.tfvars
+terraform/*.tfplan
+
+# Yandex Cloud service account key (NEVER commit)
+sa-key.json

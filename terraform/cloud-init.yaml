@@ -1,0 +1,19 @@
+#cloud-config
+# Minimal bootstrap for Ansible connectivity. Cloud-init handles ONLY:
+#   - deploy user creation (with sudo and SSH key)
+#   - Python 3 installation (Ansible requirement)
+#
+# Everything else (Docker, UFW, fail2ban, app config) is managed by
+# Ansible setup.yml. Do NOT add application-level setup here.
+users:
+  - name: deploy
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+package_update: true
+packages:
+  - python3
+  - python3-pip

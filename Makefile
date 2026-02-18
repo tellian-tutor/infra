@@ -1,11 +1,22 @@
 # infra/Makefile
 
 ANSIBLE_DIR = ansible
+TF_DIR = terraform
 
 # Default target
 .PHONY: help
 help:
 	@echo "tellian-tutor infrastructure"
+	@echo ""
+	@echo "Cloud (Terraform):"
+	@echo "  make tf-init        - Initialize Terraform (first time / after provider change)"
+	@echo "  make tf-plan        - Preview infrastructure changes"
+	@echo "  make tf-apply       - Apply infrastructure changes"
+	@echo "  make tf-output      - Show infrastructure outputs (VM IP, etc.)"
+	@echo "  make tf-validate    - Validate Terraform config syntax"
+	@echo "  make tf-fmt         - Check Terraform formatting"
+	@echo "  make tf-destroy     - Destroy all cloud resources (DANGEROUS)"
+	@echo "  make sync-inventory - Update Ansible inventory from Terraform output"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make setup          - Initial VM setup (Docker, UFW, user)"
@@ -24,6 +35,49 @@ help:
 	@echo "Secrets:"
 	@echo "  make encrypt-env    - Encrypt .env with SOPS"
 	@echo "  make decrypt-env    - Decrypt .env from SOPS"
+
+# === Cloud Infrastructure (Terraform) ===
+
+.PHONY: tf-init
+tf-init:
+	terraform -chdir=$(TF_DIR) init
+
+.PHONY: tf-plan
+tf-plan:
+	terraform -chdir=$(TF_DIR) plan
+
+.PHONY: tf-apply
+tf-apply:
+	terraform -chdir=$(TF_DIR) apply
+
+.PHONY: tf-output
+tf-output:
+	terraform -chdir=$(TF_DIR) output
+
+.PHONY: tf-destroy
+tf-destroy:
+	@echo "WARNING: This will destroy all cloud resources."
+	@read -p "Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || exit 1
+	terraform -chdir=$(TF_DIR) destroy
+
+.PHONY: tf-validate
+tf-validate:
+	terraform -chdir=$(TF_DIR) validate
+
+.PHONY: tf-fmt
+tf-fmt:
+	terraform -chdir=$(TF_DIR) fmt -check
+
+.PHONY: sync-inventory
+sync-inventory:
+	@echo "Syncing Ansible inventory with Terraform output..."
+	@VM_IP=$$(terraform -chdir=$(TF_DIR) output -raw vm_public_ip 2>/dev/null) && \
+	if [ -z "$$VM_IP" ]; then \
+		echo "ERROR: Could not get vm_public_ip from Terraform output. Run 'make tf-apply' first."; \
+		exit 1; \
+	fi && \
+	sed -i "s/ansible_host: .*/ansible_host: $$VM_IP/" $(ANSIBLE_DIR)/inventory/prod.yml && \
+	echo "Updated $(ANSIBLE_DIR)/inventory/prod.yml with VM IP: $$VM_IP"
 
 .PHONY: setup
 setup:

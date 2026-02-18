@@ -73,6 +73,8 @@ services:
 
   frontend:
     image: ghcr.io/tellian-tutor/svc-frontend:${FRONTEND_VERSION:-latest}
+    env_file:
+      - ../envs/prod/.env
     expose:
       - "80"
     healthcheck:
@@ -94,11 +96,13 @@ services:
       - caddy_data:/data
       - caddy_config:/config
       - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    env_file:
+      - ../envs/prod/.env
     depends_on:
       - frontend
       - core
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:2019/config/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

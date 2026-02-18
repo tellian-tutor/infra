@@ -5,7 +5,7 @@
 # Prerequisites:
 #   - yc CLI installed and authenticated (yc init)
 #   - Target folder selected in yc config
-#   - jq installed
+#   - python3 installed (for JSON parsing)
 #
 # This script creates:
 #   1. Service account (tellian-tutor-deployer) with scoped roles
@@ -23,10 +23,10 @@ echo "=== Yandex Cloud Bootstrap ==="
 echo "Folder: $FOLDER_ID"
 echo ""
 
-# 1. Create service account
+# 1. Create service account (skip if already exists)
 echo "Creating service account..."
-yc iam service-account create --name "$SA_NAME" --description "Terraform and deploy automation"
-SA_ID=$(yc iam service-account get "$SA_NAME" --format json | jq -r '.id')
+yc iam service-account create --name "$SA_NAME" --description "Terraform and deploy automation" 2>/dev/null || echo "Service account '$SA_NAME' already exists, skipping creation."
+SA_ID=$(yc iam service-account get "$SA_NAME" --format json | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 echo "Service account ID: $SA_ID"
 
 # 2. Assign scoped roles (not the overly broad 'editor' role)
@@ -46,8 +46,8 @@ echo "Saved to sa-key.json"
 # 4. Generate static access key for S3
 echo "Generating static access key for S3..."
 S3_KEY_OUTPUT=$(yc iam access-key create --service-account-name "$SA_NAME" --format json)
-S3_KEY_ID=$(echo "$S3_KEY_OUTPUT" | jq -r '.access_key.key_id')
-S3_SECRET=$(echo "$S3_KEY_OUTPUT" | jq -r '.secret')
+S3_KEY_ID=$(echo "$S3_KEY_OUTPUT" | python3 -c "import json,sys; print(json.load(sys.stdin)['access_key']['key_id'])")
+S3_SECRET=$(echo "$S3_KEY_OUTPUT" | python3 -c "import json,sys; print(json.load(sys.stdin)['secret'])")
 
 # 5. Create state bucket with versioning enabled
 echo "Creating Terraform state bucket..."

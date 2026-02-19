@@ -1,4 +1,4 @@
-{$DOMAIN:localhost} {
+{$DOMAIN} {
     # API, admin, health, ready, static -> svc-core
     handle /api/* {
         reverse_proxy core:8000

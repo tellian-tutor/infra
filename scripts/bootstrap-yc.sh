@@ -8,7 +8,13 @@
 #   - python3 installed (for JSON parsing)
 #
 # This script creates:
-#   1. Service account (tellian-tutor-deployer) with scoped roles
+#   1. Service account (tellian-tutor-deployer) with scoped roles:
+#      - compute.editor         — manage VM instances
+#      - vpc.admin              — manage networks, subnets, security groups
+#      - storage.admin          — create/manage S3 buckets and objects
+#      - iam.serviceAccounts.user   — impersonate service accounts
+#      - iam.serviceAccounts.admin  — create new service accounts and keys
+#      - resource-manager.admin     — manage folder IAM bindings (grant roles)
 #   2. Authorized key (sa-key.json) for Terraform + yc CLI
 #   3. Static access key for S3 backend
 #   4. S3 bucket for Terraform state (with versioning enabled)
@@ -31,7 +37,7 @@ echo "Service account ID: $SA_ID"
 
 # 2. Assign scoped roles (not the overly broad 'editor' role)
 echo "Assigning scoped roles..."
-for ROLE in compute.editor vpc.admin storage.editor iam.serviceAccounts.user; do
+for ROLE in compute.editor vpc.admin storage.admin iam.serviceAccounts.user iam.serviceAccounts.admin resource-manager.admin; do
   echo "  - $ROLE"
   yc resource-manager folder add-access-binding "$FOLDER_ID" \
     --role "$ROLE" \

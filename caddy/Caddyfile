@@ -1,10 +1,16 @@
 {$DOMAIN} {
     # API, admin, health, ready, static -> svc-core
     handle /api/* {
+        request_body {
+            max_size 10MB
+        }
         reverse_proxy core:8000
     }
 
     handle /admin/* {
+        request_body {
+            max_size 10MB
+        }
         reverse_proxy core:8000
     }
 

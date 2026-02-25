@@ -32,3 +32,20 @@ output "backup_bucket" {
   description = "Name of the S3 bucket for database backups"
   value       = yandex_storage_bucket.backups.bucket
 }
+
+output "storage_bucket" {
+  description = "Name of the S3 bucket for image storage"
+  value       = module.storage.bucket_name
+}
+
+output "storage_access_key" {
+  description = "Access key ID for image storage service account"
+  value       = module.storage.storage_access_key
+  sensitive   = true
+}
+
+output "storage_secret_key" {
+  description = "Secret key for image storage service account"
+  value       = module.storage.storage_secret_key
+  sensitive   = true
+}

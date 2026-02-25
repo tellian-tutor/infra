@@ -16,3 +16,6 @@ vm_disk_size = 20
 # Can also be set via TF_VAR_s3_access_key and TF_VAR_s3_secret_key env vars.
 # s3_access_key = ""
 # s3_secret_key = ""
+
+# Domain used for CORS allowed origins in storage bucket.
+domain = "CHANGE_ME"

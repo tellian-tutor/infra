@@ -71,3 +71,8 @@ variable "s3_secret_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "domain" {
+  description = "Application domain for CORS origins (e.g., tutor.example.com)"
+  type        = string
+}

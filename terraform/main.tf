@@ -36,3 +36,15 @@ provider "yandex" {
   folder_id                = var.folder_id
   zone                     = var.zone
 }
+
+# --- Modules ---
+
+module "storage" {
+  source = "./modules/storage"
+
+  folder_id            = var.folder_id
+  bucket_name          = "tutor-images"
+  cors_allowed_origins = ["https://${var.domain}"]
+  s3_access_key        = var.s3_access_key
+  s3_secret_key        = var.s3_secret_key
+}

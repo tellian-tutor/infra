@@ -86,14 +86,16 @@ infra/
 ├── Makefile                   # Developer-facing interface
 ├── CLAUDE.md                  # Agent instructions
 ├── terraform/                 # Cloud resource provisioning (Terraform)
-│   ├── main.tf               # Provider + backend config
+│   ├── main.tf               # Provider + backend config + module calls
 │   ├── variables.tf           # Input variables
-│   ├── outputs.tf             # Outputs (VM IP, IDs)
+│   ├── outputs.tf             # Outputs (VM IP, IDs, storage keys)
 │   ├── network.tf             # VPC, subnet, security group, static IP
 │   ├── compute.tf             # VM instance
 │   ├── storage.tf             # S3 backup bucket
 │   ├── cloud-init.yaml        # VM bootstrap (user + SSH + Python)
-│   └── terraform.tfvars.example # Variable template
+│   ├── terraform.tfvars.example # Variable template
+│   └── modules/
+│       └── storage/           # Image storage bucket, SA, CORS
 ├── ansible/
 │   ├── ansible.cfg            # SSH settings, inventory path
 │   ├── inventory/prod.yml     # VM host(s), connection vars
@@ -157,6 +159,28 @@ Cloud resources (VM, network, security group, static IP, S3 bucket) are managed 
 5. Initialize: `make tf-init`
 6. Apply: `make tf-plan` then `make tf-apply`
 7. Sync Ansible inventory: `make sync-inventory`
+
+### Deployer Service Account Roles
+
+The `tellian-tutor-deployer` service account needs specific IAM roles to manage all Terraform resources. If `terraform apply` fails with `PermissionDenied`, check that all roles below are assigned. The bootstrap script (`scripts/bootstrap-yc.sh`) assigns these automatically for new setups.
+
+| Role | Purpose |
+|------|---------|
+| `compute.editor` | Create/modify VM instances |
+| `vpc.admin` | Manage networks, subnets, security groups, static IPs |
+| `storage.admin` | Create/manage S3 buckets and objects |
+| `iam.serviceAccounts.user` | Impersonate service accounts (attach to VMs) |
+| `iam.serviceAccounts.admin` | Create new service accounts and static keys |
+| `resource-manager.admin` | Grant IAM roles at folder level (`folder_iam_member` resources) |
+
+To add a missing role manually:
+```bash
+yc resource-manager folder add-access-binding <folder-id> \
+  --role <role-id> \
+  --subject serviceAccount:<deployer-sa-id>
+```
+
+**When to update this list:** Whenever Terraform config adds a new resource type from a different Yandex Cloud service (e.g., DNS, Managed DB, Container Registry), check that the deployer SA has the required role and add it here and in `scripts/bootstrap-yc.sh`.
 
 ### Day-to-Day
 
